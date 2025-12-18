@@ -1,0 +1,14 @@
+# Gateway adalah pintu masuk SQLMesh ke database.
+# Kita beri nama 'local' karena database-nya ada di komputer kamu.
+gateways:
+  local:
+    connection:
+      type: duckdb
+      database: payroll_db.duckdb # Nama file database yang akan dibuat otomatis
+
+# Menetapkan gateway 'local' sebagai jalur utama secara default.
+default_gateway: local
+
+# Pengaturan model (default: semua model di folder models)
+model_defaults:
+  dialect: duckdb
