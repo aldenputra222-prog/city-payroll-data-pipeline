@@ -19,7 +19,7 @@ Project ini mensimulasikan sistem pengolahan data gaji pegawai pemerintahan seca
 
 ## 🏗️ Architecture
 
-```mermaid
+```Bash
 graph LR
     A[Client C++ (Ubuntu/WSL)] -- Arrow Flight (gRPC) --> B[Server Python (Windows)]
     B -- Write CSV --> C[Raw Storage (Seeds)]
