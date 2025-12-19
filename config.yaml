@@ -4,7 +4,7 @@ gateways:
   local:
     connection:
       type: duckdb
-      database: payroll_db.duckdb # Nama file database yang akan dibuat otomatis
+      database:  payroll_db.duckdb # Nama file database yang akan dibuat otomatis
 
 # Menetapkan gateway 'local' sebagai jalur utama secara default.
 default_gateway: local

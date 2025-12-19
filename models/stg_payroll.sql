@@ -31,4 +31,4 @@ SELECT
 
 -- Ingestion Strategy: Membaca langsung file CSV fisik (Direct Read).
 -- Metode ini memotong proses loading katalog untuk performa yang lebih cepat.
-FROM read_csv('seeds/raw_payroll.csv', header=True, auto_detect=True);
+FROM read_csv('seeds/raw_payroll.csv', header=True, auto_detect=True, decimal_separator=',');

@@ -4,94 +4,102 @@ import duckdb
 import json
 import logging
 import pathlib
+import os
+import pyarrow.csv as pacsv
 
-# Logging System
-# Ini standar industri. Jangan pakai 'print()', pakai logging biar ada timestamp-nya.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [SERVER] - %(message)s')
 
-class AdvancedPayrollServer(flight.FlightServerBase):
-    def __init__(self, location, parquet_path):
-        super(AdvancedPayrollServer, self).__init__(location)
-        self.parquet_path = str(pathlib.Path(parquet_path).absolute())
+class BusinessSolutionServer(flight.FlightServerBase):
+    def __init__(self, location):
+        super(BusinessSolutionServer, self).__init__(location)
         
-        # In-Memory Engine
-        # Kita nyalakan DuckDB di RAM. Ini teknik 'Compute Layer' yang terpisah dari Storage.
-        self.conn = duckdb.connect(database=':memory:')
+        # [PENTING] Kita HAPUS self.conn di sini.
+        # Kita cuma simpan nama path-nya saja.
+        # Pastikan nama file ini SAMA PERSIS dengan di config.yaml SQLMesh kamu!
+        self.db_file = 'payroll_db.duckdb' 
         
-        # Virtual View
-        # Kita tidak load data fisik. Kita cuma kasih tau DuckDB: "Eh, file-nya di situ ya".
-        logging.info(f"Loading data from: {self.parquet_path}")
-        self.conn.execute(f"CREATE OR REPLACE VIEW payroll_data AS SELECT * FROM read_parquet('{self.parquet_path}')")
-        
+        # Cek database ada atau tidak (sekadar info)
+        if not os.path.exists(self.db_file):
+            logging.warning(f"⚠️ File Database {self.db_file} belum ada. Jalankan SQLMesh dulu!")
+        else:
+            logging.info(f"Connected target: {self.db_file}")
+
+    # Fungsi pembantu untuk konek sebentar lalu tutup
+    def get_connection(self):
+        # read_only=False supaya bisa nulis kalau perlu
+        return duckdb.connect(database=self.db_file, read_only=False)
+
     def do_get(self, context, ticket):
+        con = None
         try:
-            # Ticket Handling
-            # Menerima pesanan dari Client (JSON yang di-encode jadi bytes)
-            command_str = ticket.ticket.decode('utf-8')
-            logging.info(f"Menerima Command: {command_str}")
-            command = json.loads(command_str)
+            command = json.loads(ticket.ticket.decode('utf-8'))
+            action = command.get('action')
+            logging.info(f"Menerima Request Action: {action}")
+            
+            # BUKA KONEKSI (Hanya saat dibutuhkan)
+            con = self.get_connection()
             
             query = ""
             
-            # --- ROUTING LOGIC (Otak Server) ---
-            
-            if command['action'] == 'get_all':
-                query = "SELECT * FROM payroll_data"
+            if action == 'get_full_clean':
+                # FIX: Tambahkan schema 'payroll.' di depan nama tabel
+                query = "SELECT * FROM payroll.fct_payroll" 
                 
-            elif command['action'] == 'filter_dept':
-                # [UPDATE PENTING DISINI BRO] 
-                # Dulu: SELECT * (Ambil semua sampah)
-                # Sekarang: SELECT job_title (Ambil yang penting aja)
-                # Kita taruh 'job_title' paling depan biar User langsung liat itu.
-                dept = command.get('department', '').replace("'", "")
-                
-                query = f"""
-                SELECT 
-                    job_title,      -- Teks Nama Pekerjaan (WAJIB ADA)
-                    base_pay,       -- Gaji Pokok
-                    year            -- Tahun Data (Opsional)
-                FROM payroll_data 
-                WHERE job_title ILIKE '%{dept}%'
-                ORDER BY base_pay DESC -- Kita urutkan dari gaji tertinggi biar enak dilihat
-                """
-                
-            elif command['action'] == 'summary_stats':
-                # Aggregation
-                # Server yang menghitung (SUM/COUNT), bukan Client. Hemat bandwidth.
+            elif action == 'get_budget_report':
+                # FIX: Tambahkan schema 'payroll.' di sini juga
                 query = """
                 SELECT 
-                    job_title, 
-                    COUNT(*) as total_emp, 
-                    SUM(base_pay) as total_spend 
-                FROM payroll_data 
-                GROUP BY job_title 
-                ORDER BY total_spend DESC
+                    job_title AS "Posisi Pekerjaan",
+                    COUNT(*) AS "Jumlah Karyawan",
+                    SUM(base_pay) AS "Total Anggaran Gaji",
+                    AVG(base_pay) AS "Rata-Rata Gaji"
+                FROM payroll.fct_payroll
+                GROUP BY job_title
+                ORDER BY "Total Anggaran Gaji" DESC
                 """
-            
             else:
-                raise ValueError("Unknown action")
+                raise ValueError("Menu tidak tersedia.")
             
-            # Execution
-            # Jalankan query di Memory Server
-            logging.info(f"Executing SQL: {query}")
-            result_rel = self.conn.sql(query)
+            logging.info(f"Executing Query...")
+            result_rel = con.sql(query)
             
-            # Streaming
-            # Kirim hasil balik ke Client via Arrow Protocol
             return flight.RecordBatchStream(result_rel.arrow())
             
         except Exception as e:
-            logging.error(f"Error processing request: {e}")
+            logging.error(f"Error serving data: {e}")
+            raise
+        finally:
+            if con:
+                con.close()
+
+    # =========================================================================
+    # FITUR 2: INGESTION (Terima Data Mentah)
+    # =========================================================================
+    def do_put(self, context, descriptor, reader, writer):
+        try:
+            logging.info("[INGESTION] Menerima Data Mentah Baru...")
+            incoming_table = reader.read_all() # Data Arrow murni
+            
+            save_path = "seeds/raw_payroll.csv"
+            
+            # --- CARA KUNO (PANDAS) - HAPUS INI ---
+            # df = incoming_table.to_pandas()  <-- MEMORY SPIKE DISINI
+            # df.to_csv(save_path, index=False) <-- CPU SPIKE DISINI
+            
+            # --- CARA MODERN (PYARROW NATIVE) ---
+            # Menulis langsung dari Arrow ke CSV. Jauh lebih efisien.
+            pacsv.write_csv(incoming_table, save_path)
+            
+            logging.info(f"[SUCCESS] File Seeds Updated: {save_path}")
+            logging.info(">> Database TIDAK DI-LOCK. Silakan jalankan 'sqlmesh plan' sekarang! <<")
+            
+        except Exception as e:
+            logging.error(f"Gagal update seed: {e}")
             raise
 
 def main():
-    DATA_PATH = "./file_parquet/clean_data.parquet"
-    if not pathlib.Path(DATA_PATH).exists():
-        print("⚠️ File Parquet tidak ditemukan! Jalankan ETL dulu.")
-        return
-
-    server = AdvancedPayrollServer("grpc://0.0.0.0:8815", DATA_PATH)
-    logging.info("🚀 Advanced Flight Server Listening on Port 8815")
+    server = BusinessSolutionServer("grpc://0.0.0.0:9999")
+    logging.info("🚀 Business Server Ready on Port 9999 (Lock-Free Mode)")
     server.serve()
 
 if __name__ == '__main__':
