@@ -57,7 +57,6 @@ Environment: WSL 2 (Ubuntu 22.04) & Windows 11.
 
 ├── cpp_client/            # Source code Client C++
 │   ├── gov_app.cpp        # Main application logic
-│   └── seeds/             # Local staging for upload
 ├── models/                # SQLMesh Models (Transformation Logic)
 │   ├── stg_payroll.sql    # Silver Layer (Cleaning)
 │   └── fct_payroll.sql    # Gold Layer (Final Product)
