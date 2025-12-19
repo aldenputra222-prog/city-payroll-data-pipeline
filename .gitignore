@@ -16,6 +16,7 @@ logs/
 *.parquet
 *.db
 *.duckdb
+*.xlsx
 
 # Mac system file (kalau ada)
 .DS_Store
