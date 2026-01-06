@@ -30,28 +30,28 @@ Project ini mensimulasikan sistem manajemen data payroll terpusat yang melayani 
     A -- Visualisation (Altair) --> E[Executive Report]
 ```
 
-Frontend (Streamlit): Interface interaktif untuk Login, Upload Data, dan Visualisasi Laporan Keuangan.
+* **Frontend (Streamlit): Interface interaktif untuk Login, Upload Data, dan Visualisasi Laporan Keuangan.**
 
-Backend (Python Server): Menangani autentikasi, validasi nama file, thread-safe upload, dan trigger SQLMesh.
+* **Backend (Python Server): Menangani autentikasi, validasi nama file, thread-safe upload, dan trigger SQLMesh.**
 
-Transformation (SQLMesh):
+*  **Transformation (SQLMesh):**
 
-Staging (STG): Data Cleaning (Regex removal currency, Type Casting, Null Handling).
+    *  **Staging (STG): Data Cleaning (Regex removal currency, Type Casting, Null Handling).**
 
-Fact (FCT): Penerapan Business Logic spesifik (e.g., Overtime Risk untuk Corporate, Seniority Bonus untuk Education).
+    * **Fact (FCT): Penerapan Business Logic spesifik (e.g., Overtime Risk untuk Corporate, Seniority Bonus untuk Education).**
 
 ## 🛠️ Tech Stack
-Language: Python 3.10+
+* **Language: Python 3.10+**
 
-Transport: Apache Arrow Flight (High-performance RPC)
+* **Transport: Apache Arrow Flight (High-performance RPC)**
 
-Database: DuckDB (OLAP Engine)
+* **Database: DuckDB (OLAP Engine)**
 
-Transformation: SQLMesh
+* **Transformation: SQLMesh**
 
-Frontend: Streamlit & Altair
+* **Frontend: Streamlit & Altair**
 
-Security: Hashlib (SHA-256), Threading Locks
+* **Security: Hashlib (SHA-256), Threading Locks**
 
 ## 📂 Project Structure
 
@@ -71,7 +71,7 @@ EDU_PAYROLL_TRANSFORM/
 ```
 
 ## 🚀 How to Run
-1. Server Side (Backend)
+1. **Server Side (Backend)**
 Server bertugas menangani koneksi gRPC dan proses ETL.
 
 ```Bash
@@ -85,9 +85,10 @@ sqlmesh init duckdb
 # Jalankan Server
 python serve_flight.py
 # Output: Server listening on grpc://0.0.0.0:9999
-2. Client Side (Frontend)
-Buka terminal baru untuk menjalankan dashboard.
 ```
+
+2. **Client Side (Frontend)**
+Buka terminal baru untuk menjalankan dashboard.
 
 ```Bash
 
@@ -95,18 +96,18 @@ cd web_dashboard
 streamlit run app.py
 ```
 
-3. Usage Workflow
-Login: Gunakan Client ID yang terdaftar (misal: NJ_Department_of_Education).
+3. **Usage Workflow**
+* **Login: Gunakan Client ID yang terdaftar (misal: NJ_Department_of_Education).**
 
-Ingest Data: Upload file CSV. PENTING: Nama file harus mengandung kata kunci industri (contoh: data_education_2024.csv).
+* **Ingest Data: Upload file CSV. PENTING: Nama file harus mengandung kata kunci industri (contoh: data_education_2024.csv).**
 
-Transform & Report: Klik "Tarik Laporan". Sistem akan memproses data via SQLMesh dan menampilkan grafik analitik.
+* **Transform & Report: Klik "Tarik Laporan". Sistem akan memproses data via SQLMesh dan menampilkan grafik analitik.**
 
 ## 🧠 Key Learnings & Challenges
-Data Integrity vs Flexibility: Tantangan terbesar adalah menangani user yang salah upload file. Solusinya adalah implementasi Filename Keyword Validation di level server sebelum data menyentuh database.
+* **Data Integrity vs Flexibility: Tantangan terbesar adalah menangani user yang salah upload file. Solusinya adalah implementasi Filename Keyword Validation di level server sebelum data menyentuh database.**
 
-Thread-Safety: Mengelola concurrent upload dari beberapa user sekaligus menggunakan threading.Lock() agar proses SQLMesh tidak bertabrakan.
+* **Thread-Safety: Mengelola concurrent upload dari beberapa user sekaligus menggunakan threading.Lock() agar proses SQLMesh tidak bertabrakan.**
 
-Business Logic Complexity: Menerjemahkan kebutuhan bisnis yang berbeda (Gaji Guru vs Klaim RS) menjadi kode SQL yang modular dan maintainable menggunakan arsitektur Medallion.
+* **Business Logic Complexity: Menerjemahkan kebutuhan bisnis yang berbeda (Gaji Guru vs Klaim RS) menjadi kode SQL yang modular dan maintainable menggunakan arsitektur Medallion.**
 
-Secure Storage: Belajar tidak menyimpan password dalam plain-text, melainkan menggunakan Hashing (SHA-256) untuk simulasi standar keamanan enterprise.
+* **Secure Storage: Belajar tidak menyimpan password dalam plain-text, melainkan menggunakan Hashing (SHA-256) untuk simulasi standar keamanan enterprise.**
