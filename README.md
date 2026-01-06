@@ -1,115 +1,113 @@
-# 🚀 End-to-End City Payroll Data Pipeline
+# 🚀 ArrowFlow: Multi-Tenant gRPC Payroll Integration
 
-A high-performance data engineering pipeline demonstrating **Cross-Platform Architecture** (Windows/Linux) using **Apache Arrow Flight**, **SQLMesh**, and **C++**.
+A high-performance, secure, and multi-tenant data engineering pipeline designed to handle cross-industry payroll analytics using **Apache Arrow Flight**, **SQLMesh**, and **Streamlit**.
 
 ![Status](https://img.shields.io/badge/Status-Completed-success)
-![Stack](https://img.shields.io/badge/Tech-Arrow%20Flight%20%7C%20DuckDB%20%7C%20SQLMesh%20%7C%20C%2B%2B-blue)
+![Stack](https://img.shields.io/badge/Tech-Arrow%20Flight%20%7C%20DuckDB%20%7C%20SQLMesh%20%7C%20Streamlit-blue)
+![Security](https://img.shields.io/badge/Security-SHA256%20Auth-red)
 
 ## 📖 Project Overview
 
-Project ini mensimulasikan sistem pengolahan data gaji pegawai pemerintahan secara terpusat. Sistem ini memisahkan **Client** (User Interface) dan **Server** (Data Processing) di dua lingkungan sistem operasi yang berbeda, meniru arsitektur *Hybrid Cloud* di dunia nyata.
+Project ini mensimulasikan sistem manajemen data payroll terpusat yang melayani berbagai sektor industri (**Corporate, Education, Hospital**) dalam satu infrastruktur. Sistem ini memisahkan **Frontend** (Streamlit Dashboard) dan **Backend** (gRPC Server) untuk meniru arsitektur *Distributed System* yang aman dan scalable.
 
 **Key Features:**
-* **High-Performance Transfer:** Menggunakan protokol Apache Arrow Flight (gRPC) untuk mengirim data besar dalam hitungan detik tanpa *serialization overhead*.
-* **Cross-Platform:** Client berjalan di **Ubuntu (WSL)**, Server & Database berjalan di **Windows**.
-* **Modern ETL:** Transformasi data menggunakan **SQLMesh** dengan arsitektur Medallion (Bronze -> Silver -> Gold).
-* **Robust Data Cleaning:** Penanganan format mata uang dan anomali data menggunakan Regex tingkat lanjut di DuckDB.
+* **High-Performance Transfer:** Menggunakan protokol **Apache Arrow Flight (gRPC)** untuk streaming data CSV besar dan retrieval report tanpa *serialization overhead*.
+* **Secure Multi-Tenant:** Isolasi database DuckDB per tenant dan penyimpanan kredensial terenkripsi (SHA-256) dalam `users.json`.
+* **Smart Validation Gate:** Fitur keamanan yang menolak upload file jika nama file tidak sesuai dengan tipe industri akun (mencegah *Schema Mismatch*).
+* **Automated ETL:** Transformasi data otomatis menggunakan **SQLMesh** dengan pemisahan layer Staging (Cleaning) dan Fact (Business Logic).
 
 ---
 
 ## 🏗️ Architecture
 
-```Bash
+```mermaid
 graph LR
-    A[Client C++ (Ubuntu/WSL)] -- Arrow Flight (gRPC) --> B[Server Python (Windows)]
-    B -- Write CSV --> C[Raw Storage (Seeds)]
-    C -- Ingest --> D[DuckDB Database]
-    D -- Transform (SQLMesh) --> D
+    A[User / Streamlit Dashboard] -- Arrow Flight (gRPC) --> B[Server Engine (Python)]
+    B -- Validate Filename & Auth --> B
+    B -- Write Raw CSV --> C[Raw Storage]
+    C -- Ingest --> D[DuckDB per Tenant]
+    D -- SQLMesh Transform (STG -> FCT) --> D
     B -- Read Gold Data --> A
-    A -- Save CSV --> E[Excel Report]
+    A -- Visualisation (Altair) --> E[Executive Report]
 ```
 
-1. Client (C++): Aplikasi CLI interaktif untuk upload raw data dan request laporan.
+Frontend (Streamlit): Interface interaktif untuk Login, Upload Data, dan Visualisasi Laporan Keuangan.
 
-2. Server (Python): Menangani request Flight, menyimpan file raw, dan melayani data matang.
+Backend (Python Server): Menangani autentikasi, validasi nama file, thread-safe upload, dan trigger SQLMesh.
 
-3. Transformation (SQLMesh):
+Transformation (SQLMesh):
 
- - Bronze: Raw CSV ingestion.
+Staging (STG): Data Cleaning (Regex removal currency, Type Casting, Null Handling).
 
- - Silver: Data Cleaning (Regex removal of non-numeric chars, Type Casting).
+Fact (FCT): Penerapan Business Logic spesifik (e.g., Overtime Risk untuk Corporate, Seniority Bonus untuk Education).
 
- - Gold: Business Logic & Aggregation (Budget Reports).
+## 🛠️ Tech Stack
+Language: Python 3.10+
 
-# 🛠️ Tech Stack
-Language: C++ (Client), Python (Server), SQL (Transformation).
+Transport: Apache Arrow Flight (High-performance RPC)
 
-Transport: Apache Arrow Flight (High-performance RPC).
+Database: DuckDB (OLAP Engine)
 
-Database: DuckDB (OLAP Engine).
+Transformation: SQLMesh
 
-Transformation Tool: SQLMesh.
+Frontend: Streamlit & Altair
 
-Environment: WSL 2 (Ubuntu 22.04) & Windows 11.
+Security: Hashlib (SHA-256), Threading Locks
 
-# 📂 Project Structure
+## 📂 Project Structure
+
+```Bash
+EDU_PAYROLL_TRANSFORM/
+├── models/                     # SQLMesh Models (Transformation Logic)
+│   ├── corporate/              # Corporate Sector Logic
+│   ├── education/              # Education Sector Logic
+│   └── hospital/               # Healthcare Sector Logic
+├── web_dashboard/              # Frontend Application
+│   ├── app.py                  # Main Streamlit Dashboard
+│   └── backend_client.py       # Arrow Flight Client Wrapper
+├── serve_flight.py             # Main Backend Server
+├── users.json                  # Encrypted User Database
+├── config.yaml                 # SQLMesh Configuration
+└── README.md                   # Project Documentation
+```
+
+## 🚀 How to Run
+1. Server Side (Backend)
+Server bertugas menangani koneksi gRPC dan proses ETL.
+
 ```Bash
 
-├── cpp_client/            # Source code Client C++
-│   ├── gov_app.cpp        # Main application logic
-├── models/                # SQLMesh Models (Transformation Logic)
-│   ├── stg_payroll.sql    # Silver Layer (Cleaning)
-│   └── fct_payroll.sql    # Gold Layer (Final Product)
-├── seeds/                 # Server-side Raw Data Storage
-├── serve_flight.py        # Python Arrow Flight Server
-├── config.yaml            # SQLMesh Configuration
-└── README.md              # Project Documentation
-```
+# Install Dependencies
+pip install -r requirements.txt
 
-# 🚀 How to Run
-1. Server Side (Windows)
-Pastikan Python dan library Arrow terinstall.
+# Initialize SQLMesh (First run only)
+sqlmesh init duckdb
 
-```Powershell
 # Jalankan Server
 python serve_flight.py
 # Output: Server listening on grpc://0.0.0.0:9999
+2. Client Side (Frontend)
+Buka terminal baru untuk menjalankan dashboard.
 ```
-
-2. ETL Process (Windows)
-Setelah data diterima dari client, jalankan transformasi data:
-
-```Powershell
-# Validasi dan Apply Model
-sqlmesh plan --auto-apply
-```
-
-3. Client Side (Ubuntu / WSL)
-Compile dan jalankan aplikasi C++.
 
 ```Bash
-# Masuk ke folder client
-cd cpp_client
 
-# Compile
-g++ gov_app.cpp -o gov_app -larrow -larrow_flight -O3
-
-# Run Application
-./gov_app
+cd web_dashboard
+streamlit run app.py
 ```
 
-# 📸 Usage Demo
-1. Upload Raw Data User memilih menu upload di C++ Client. Data dikirim via jaringan ke Windows Server.
+3. Usage Workflow
+Login: Gunakan Client ID yang terdaftar (misal: NJ_Department_of_Education).
 
-2. Download Report User meminta laporan anggaran. Server mengirim stream data Arrow yang sudah bersih.
+Ingest Data: Upload file CSV. PENTING: Nama file harus mengandung kata kunci industri (contoh: data_education_2024.csv).
 
-Note: Output file CSV menggunakan standar Internasional (Dot Decimal). Jika membuka di Excel dengan Region Indonesia, gunakan fitur Get Data -> From Text/CSV dan set Locale ke English (US).
+Transform & Report: Klik "Tarik Laporan". Sistem akan memproses data via SQLMesh dan menampilkan grafik analitik.
 
-# 🧠 Key Learnings & Challenges
-Cross-Platform Networking: Mengatur firewall Windows dan IP forwarding agar WSL bisa berkomunikasi dengan Host Windows.
+## 🧠 Key Learnings & Challenges
+Data Integrity vs Flexibility: Tantangan terbesar adalah menangani user yang salah upload file. Solusinya adalah implementasi Filename Keyword Validation di level server sebelum data menyentuh database.
 
-Data Consistency: Menangani isu "Garbage Data" (nilai kuadriliun) akibat kesalahan format locale (Titik vs Koma) menggunakan Regex [^0-9.] di DuckDB.
+Thread-Safety: Mengelola concurrent upload dari beberapa user sekaligus menggunakan threading.Lock() agar proses SQLMesh tidak bertabrakan.
 
-Memory Management: Implementasi std::unique_ptr dan std::move di C++ untuk menangani objek Arrow Flight secara efisien.
+Business Logic Complexity: Menerjemahkan kebutuhan bisnis yang berbeda (Gaji Guru vs Klaim RS) menjadi kode SQL yang modular dan maintainable menggunakan arsitektur Medallion.
 
-Created by [Alden] Vocational High School Student | Aspiring Data Engineer
+Secure Storage: Belajar tidak menyimpan password dalam plain-text, melainkan menggunakan Hashing (SHA-256) untuk simulasi standar keamanan enterprise.
