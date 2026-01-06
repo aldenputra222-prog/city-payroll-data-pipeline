@@ -20,8 +20,7 @@ Project ini mensimulasikan sistem manajemen data payroll terpusat yang melayani 
 
 ## 🏗️ Architecture
 
-```mermaid
-graph LR
+```bash
     A[User / Streamlit Dashboard] -- Arrow Flight (gRPC) --> B[Server Engine (Python)]
     B -- Validate Filename & Auth --> B
     B -- Write Raw CSV --> C[Raw Storage]
