@@ -1,14 +1,30 @@
-# Gateway adalah pintu masuk SQLMesh ke database.
-# Kita beri nama 'local' karena database-nya ada di komputer kamu.
+# ---------------------------------------------------------
+# SQLMESH CONFIGURATION: MULTI-TENANT ARCHITECTURE
+# ---------------------------------------------------------
+
+# Gateway adalah pintu masuk utama SQLMesh ke database DuckDB.
 gateways:
   local:
     connection:
       type: duckdb
-      database:  payroll_db.duckdb # Nama file database yang akan dibuat otomatis
+      # [LOGIC] Kita set default ke file temporary atau database utama.
+      # Tapi tenang, di server.py nanti kita akan override path ini secara otomatis
+      # sesuai dengan folder 'Clean' milik perusahaan yang login.
+      database: storage/main_system.duckdb
 
 # Menetapkan gateway 'local' sebagai jalur utama secara default.
 default_gateway: local
 
-# Pengaturan model (default: semua model di folder models)
+# 1. MODEL DEFAULTS
+# Mengatur agar semua script SQL kita dibaca menggunakan dialek DuckDB.
 model_defaults:
   dialect: duckdb
+  # [LOGIC] Kind FULL artinya setiap kali data masuk, tabel akan dibangun ulang
+  # agar data selalu fresh sesuai file terbaru di folder Raw.
+  kind: full
+
+# 2. VARIABLES (Dynamic Variables)
+# [LOGIC] Ini kunci sakti kita! Kita siapkan variabel kosong yang nanti
+# akan diisi oleh Server dengan Path folder 'Raw' milik PT masing-masing.
+variables:
+  client_raw_path: ""

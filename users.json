@@ -1,0 +1,14 @@
+{
+    "The_Los_Angeles_City_Controller_Office": {
+        "password": "bee5688aea66a47460b19c76f8f199c6b9585eb726f8322b1429793863609ca2",
+        "industry_type": "corporate"
+    },
+    "NJ_Department_of_Education": {
+        "password": "aaffebecec560fec66e75f24062224ffa4e07696d2ae9a1fee3707c3f8fd9373",
+        "industry_type": "education"
+    },
+    "JUS_Medicare_Health_Services": {
+        "password": "9195b0dafcaefe3be61b1faad68ff04d3d6754cbbb2717344f2ef4414f229786",
+        "industry_type": "hospital"
+    }
+}
