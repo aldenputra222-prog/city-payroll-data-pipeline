@@ -3,11 +3,8 @@ import pyarrow as pa
 import json
 import pandas as pd
 
-# ============================================================================
 # Client Payroll gRPC
-# ============================================================================
 # Kelas ini tugasnya jadi perantara (wrapper) antara Streamlit dan Server.
-# Dia ngebungkus semua kerumitan protokol Arrow Flight biar gampang dipanggil.
 
 class PayrollClient:
     
