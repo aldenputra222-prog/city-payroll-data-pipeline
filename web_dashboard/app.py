@@ -4,9 +4,8 @@ import pandas as pd
 from backend_client import PayrollClient 
 import altair as alt
 
-# ============================================================================
-# [POINT 1: PAGE CONFIGURATION]
-# ============================================================================
+# --- Konfigurasi Halaman Dasar ---
+# Judul tab browser, icon, dan layout lebar
 st.set_page_config(
     page_title="Payroll X Dashboard",
     page_icon="💸",
@@ -14,9 +13,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ============================================================================
-# [POINT 2: CUSTOM STYLING]
-# ============================================================================
+# --- Styling CSS Custom ---
+# Biar tampilan metrik dan layout lebih rapi (menghilangkan padding bawaan yg kegedean)
 st.markdown("""
 <style>
     .block-container {
@@ -45,9 +43,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# [POINT 3: gRPC CLIENT INITIALIZATION]
-# ============================================================================
+# --- Inisialisasi Koneksi ke Server ---
+# Coba connect ke backend gRPC, kalau gagal langsung stop aplikasi
 try:
     grpc_client = PayrollClient("grpc://localhost:9999")
 except Exception as e:
@@ -55,9 +52,8 @@ except Exception as e:
     st.info("💡 Pastikan server.py sudah running di port 9999")
     st.stop()
 
-# ============================================================================
-# [POINT 4: SESSION STATE MANAGEMENT]
-# ============================================================================
+# --- Manajemen Session State ---
+# Variabel memori sementara biar data gak ilang saat user klik tombol (refresh parsial)
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
@@ -73,9 +69,8 @@ if 'summary_data' not in st.session_state:
 if 'show_summary' not in st.session_state:
     st.session_state['show_summary'] = False
 
-# ============================================================================
-# [POINT 5: LOGIN PAGE]
-# ============================================================================
+# --- Halaman Login ---
+# Kalau user belum login, tampilkan form login
 if not st.session_state['logged_in']:
     col_center = st.columns([1, 2, 1])
     
@@ -94,9 +89,11 @@ if not st.session_state['logged_in']:
                 st.warning("⚠️ Harap isi Client ID dan Password!")
             else:
                 with st.spinner("Memverifikasi Kredensial..."):
+                    # Cek password ke server
                     success, response = grpc_client.get_file_list(client_id, password)
                 
                 if success:
+                    # Simpan kredensial di session dan set status login
                     st.session_state['creds'] = {"id": client_id, "pass": password}
                     st.session_state['logged_in'] = True
                     
@@ -107,17 +104,15 @@ if not st.session_state['logged_in']:
                     st.error("❌ Login Gagal: ID atau Password tidak valid!")
                     st.info("💡 Hubungi administrator jika lupa password")
 
-# ============================================================================
-# [POINT 6: MAIN DASHBOARD]
-# ============================================================================
+# --- Halaman Utama Dashboard ---
+# Kalau user sudah login, masuk ke sini
 else:
-    # ========================================================================
-    # SIDEBAR - Navigation & File Management
-    # ========================================================================
+    # --- Sidebar Navigasi ---
     with st.sidebar:
         st.title(f"🏢 {st.session_state['creds']['id']}")
         st.caption("Enterprise Edition v1.0")
         
+        # Indikator status server
         status_col1, status_col2 = st.columns([1, 3])
         with status_col1:
             st.success("●")
@@ -144,11 +139,13 @@ else:
         
         st.markdown("### 📂 Data Management")
         
+        # Ambil daftar file yang tersedia di server
         has_files, file_data = grpc_client.get_file_list(
             st.session_state['creds']['id'], 
             st.session_state['creds']['pass']
         )
         
+        # Dropdown buat milih database DuckDB
         if has_files:
             clean_files = file_data.get('clean', [])
             
@@ -165,6 +162,7 @@ else:
                 st.info("Upload file CSV di tab 'Ingest Data'")
                 st.session_state['selected_db_file'] = None
 
+            # List file mentah (raw) buat audit
             with st.expander("🔍 Audit Raw Files"):
                 raw_files = file_data.get('raw', [])
                 if raw_files:
@@ -180,23 +178,20 @@ else:
             
         st.markdown("---")
         
+        # Tombol Logout
         if st.button("🚪 Logout", use_container_width=True, type="secondary"):
             st.session_state['logged_in'] = False
             st.session_state['selected_db_file'] = None
             st.rerun()
 
-    # ========================================================================
-    # MAIN CONTENT AREA
-    # ========================================================================
+    # --- Area Konten Utama ---
     st.title("📊 Executive Dashboard")
     st.markdown("Pantau kinerja anggaran dan distribusi gaji secara *real-time*.")
     st.markdown("---")
 
     tab1, tab2 = st.tabs(["📤 Ingest Data", "📈 Financial Insights"])
 
-    # ========================================================================
-    # TAB 1: DATA INGESTION
-    # ========================================================================
+    # --- TAB 1: Upload Data ---
     with tab1:
         st.info("""
         📋 **Upload file CSV mentah (Raw) untuk diproses pipeline.**
@@ -205,6 +200,7 @@ else:
         request Anda akan menunggu hingga proses sebelumnya selesai. Ini memastikan data integrity.*
         """)
         
+        # Widget Upload File
         uploaded_file = st.file_uploader(
             "Drop CSV Here", 
             type=["csv"],
@@ -212,6 +208,7 @@ else:
         )
         
         if uploaded_file:
+            # Hitung ukuran file buat estimasi waktu
             file_size_mb = uploaded_file.size / (1024 * 1024)
             file_size_gb = file_size_mb / 1024
             
@@ -224,6 +221,7 @@ else:
                 else:
                     st.metric("Ukuran", f"{file_size_gb:.2f} GB")
             
+            # Peringatan kalau file kegedean
             if file_size_mb > 1000:
                 st.warning(f"⚠️ File sangat besar ({file_size_gb:.2f} GB)")
                 st.info("""
@@ -235,6 +233,7 @@ else:
             elif file_size_mb > 100:
                 st.info(f"📊 File berukuran menengah. Estimasi upload: ~{file_size_mb/50:.0f} menit")
             
+            # Preview isi CSV
             with st.expander("👁️ Preview Data (5 baris pertama)"):
                 try:
                     df_preview = pd.read_csv(uploaded_file, nrows=5)
@@ -245,6 +244,7 @@ else:
             
             st.success(f"✅ File siap dikirim ke Raw Zone")
             
+            # Tombol Eksekusi Upload
             if st.button("🚀 Proses & Bersihkan Data", type="primary", use_container_width=True):
                 uploaded_file.seek(0)
                 
@@ -253,6 +253,7 @@ else:
                     spinner_msg = f"⏳ Uploading {file_size_mb:.0f}MB... Mohon tunggu, jangan refresh browser!"
                 
                 with st.spinner(spinner_msg):
+                    # Kirim file ke backend
                     success, msg = grpc_client.upload_csv(
                         uploaded_file, 
                         st.session_state['creds']['id'],
@@ -268,9 +269,7 @@ else:
                     st.error(msg)
                     st.info("💡 Periksa log server untuk detail error")
 
-    # ========================================================================
-    # TAB 2: FINANCIAL INSIGHTS
-    # ========================================================================
+    # --- TAB 2: Laporan & Visualisasi ---
     with tab2:
         target_file = st.session_state.get('selected_db_file')
 
@@ -284,6 +283,7 @@ else:
             4. ⚡ Klik tombol **Tarik Laporan**
             """)
         else:
+            # Header Laporan
             col_header, col_action = st.columns([3, 1])
             
             with col_header:
@@ -297,11 +297,10 @@ else:
                     use_container_width=True
                 )
             
-            # ================================================================
-            # DATA FETCHING & VISUALIZATION
-            # ================================================================
+            # Proses Tarik Data (Aggregasi)
             if refresh_btn:
                 with st.spinner('🔍 Querying DuckDB & Aggregating Data...'):
+                    # Request data summary ke backend
                     success, data = grpc_client.get_summary_report(
                         st.session_state['creds']['id'],
                         st.session_state['creds']['pass'],
@@ -316,23 +315,17 @@ else:
                     st.error(f"❌ Gagal mengambil data: {data}")
                     st.info("💡 Periksa koneksi server atau coba refresh")
             
-            # ================================================================
-            # DISPLAY SUMMARY DATA (Persistent after button click)
-            # ================================================================
+            # Tampilkan Hasil Laporan
             if st.session_state['show_summary'] and st.session_state['summary_data'] is not None:
                 data = st.session_state['summary_data']
                 
-                # ========================================================
-                # VALIDATION: Check if data is empty
-                # ========================================================
                 if data.empty:
                     st.warning("⚠️ Data kosong atau belum ada transaksi")
                 else:
-                    # ====================================================
-                    # DATA PREPROCESSING (CRITICAL!)
-                    # ====================================================
+                    # Normalisasi nama kolom (biar aman kalau ada spasi/huruf besar)
                     data.columns = data.columns.str.lower().str.strip().str.replace(' ', '_')
                     
+                    # Pastikan tipe data angka benar
                     numeric_cols = ['total_budget', 'total_employee']
                     for col in numeric_cols:
                         if col in data.columns:
@@ -343,9 +336,7 @@ else:
                     if data.empty:
                         st.error("❌ Data tidak valid setelah preprocessing")
                     else:
-                        # ====================================================
-                        # SECTION 1: KEY METRICS (KPI Cards)
-                        # ====================================================
+                        # --- KPI Cards (Angka Penting) ---
                         total_budget = data['total_budget'].sum() if 'total_budget' in data.columns else 0
                         total_emp = data['total_employee'].sum() if 'total_employee' in data.columns else 0
                         avg_salary = total_budget / total_emp if total_emp > 0 else 0
@@ -378,9 +369,7 @@ else:
 
                         st.markdown("---")
 
-                        # ====================================================
-                        # SECTION 2: VISUALIZATION & DATA TABLE
-                        # ====================================================
+                        # --- Visualisasi & Tabel ---
                         col_chart, col_table = st.columns([1.5, 1])
                         
                         with col_chart:
@@ -408,6 +397,7 @@ else:
                                 else:
                                     st.caption(f"Menampilkan {len(top_data)} posisi dari total {len(data)} posisi")
                                     
+                                    # Bikin Chart pakai Altair
                                     chart = alt.Chart(top_data).mark_bar(
                                         cornerRadius=5,
                                         size=30
@@ -482,6 +472,7 @@ else:
                                 }
                             )
                             
+                            # Tombol Download Summary CSV
                             csv_export = data.to_csv(index=False).encode('utf-8')
                             st.download_button(
                                 label="📥 Download CSV",
@@ -491,9 +482,7 @@ else:
                                 use_container_width=True
                             )
                         
-                        # ====================================================
-                        # SECTION 3: ADDITIONAL INSIGHTS (Optional)
-                        # ====================================================
+                        # --- Statistik Tambahan ---
                         with st.expander("📈 Detail Statistik"):
                             stats_col1, stats_col2 = st.columns(2)
                             
@@ -505,9 +494,7 @@ else:
                                 st.metric("Budget Terendah", f"${data['total_budget'].min():,.0f}")
                                 st.metric("Median Budget", f"${data['total_budget'].median():,.0f}")
 
-                        # ====================================================
-                        # [SECTION 4: FULL DATA EXPORT]
-                        # ====================================================
+                        # --- Fitur Download Full Data ---
                         st.markdown("---")
                         st.subheader("📥 Full Data Export")
                         st.caption("Download seluruh dataset dari .duckdb file (converted to CSV)")
@@ -525,9 +512,7 @@ else:
                         with col_info:
                             st.metric("File Format", "CSV", help="Converted dari .duckdb")
                         
-                        # ====================================================
-                        # FULL DATA FETCHING & EXPORT
-                        # ====================================================
+                        # Logic Download Full Data
                         if export_btn:
                             with st.spinner('⬇️ Mengunduh data lengkap dari .duckdb...'):
                                 success_full, full_data = grpc_client.get_full_data(
@@ -556,6 +541,7 @@ else:
                                         key="btn_download_full_csv"
                                     )
                                     
+                                    # Info ukuran file
                                     info_col1, info_col2, info_col3 = st.columns(3)
                                     with info_col1:
                                         st.metric("Total Baris", f"{len(full_data):,}", help="Jumlah record dalam dataset")
@@ -576,8 +562,6 @@ else:
                                 st.error(f"❌ Gagal mengunduh data: {full_data}")
                                 st.info("💡 Periksa koneksi server atau coba refresh")
 
-# ============================================================================
-# [POINT 7: FOOTER INFORMATION]
-# ============================================================================
+# --- Footer ---
 st.markdown("---")
 st.caption("🔐 Secure Multi-Tenant Platform | Powered by SQLMesh & DuckDB")

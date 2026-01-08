@@ -12,9 +12,6 @@ import threading
 
 from sqlmesh.core.context import Context
 
-# ============================================================================
-# KONFIGURASI LOGGING
-# ============================================================================
 # Setup biar kita bisa lihat aktivitas server di terminal (monitoring)
 logging.basicConfig(
     level=logging.INFO, 
